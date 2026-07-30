@@ -1,0 +1,166 @@
+\documentclass[aspectratio=169]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath, amssymb, bm}
+\usepackage{graphicx}
+\usepackage{booktabs}  % for professional tables
+
+% ===== COLORS =====
+\definecolor{navy}{RGB}{26, 42, 58}        % #1A2A3A
+\definecolor{accent}{RGB}{230, 126, 34}    % #E67E22 (Orange - use this!)
+% Alternative accents: \definecolor{accent}{RGB}{46, 134, 193} (Blue)
+
+\setbeamercolor{structure}{fg=navy}
+\setbeamercolor{palette primary}{bg=navy, fg=white}
+\setbeamercolor{palette secondary}{bg=navy!80, fg=white}
+\setbeamercolor{palette tertiary}{bg=navy!60, fg=white}
+\setbeamercolor{title}{fg=navy}
+\setbeamercolor{frametitle}{fg=navy}
+\setbeamercolor{section in toc}{fg=navy}
+\setbeamercolor{itemize item}{fg=accent}
+\setbeamercolor{itemize subitem}{fg=accent!70}
+\setbeamercolor{enumerate item}{fg=accent}
+\setbeamercolor{block title}{bg=navy, fg=white}
+\setbeamercolor{block body}{bg=navy!5, fg=black}
+
+% ===== FONTS =====
+\usefonttheme{professionalfonts}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+
+% ===== NAVIGATION =====
+\setbeamertemplate{navigation symbols}{}  % removes ugly nav buttons
+\setbeamertemplate{footline}[frame number]  % slide numbers at bottom
+
+% ===== ITEMIZE STYLE =====
+\setbeamertemplate{itemize items}[circle]
+\setbeamertemplate{itemize subitem}[triangle]
+
+% ===== TITLE PAGE =====
+\title{Your Thesis Title Here}
+\subtitle{Subtitle if you have one}
+\author{Your Name}
+\institute{Your University \\ \textit{your.email@university.edu}}
+\date{\today}
+
+\begin{document}
+
+% --- SLIDE 1: TITLE ---
+\begin{frame}
+\titlepage
+\end{frame}
+
+% --- SLIDE 2: OUTLINE ---
+\begin{frame}{Outline}
+\tableofcontents
+\end{frame}
+
+% ===== SECTION 1: INTRODUCTION =====
+\section{Introduction}
+
+% --- SLIDE 3: MOTIVATION ---
+\begin{frame}{Motivation}
+\begin{itemize}
+    \item \textbf{Problem:} Volatility clustering in equity markets
+    \item Traditional models assume constant variance
+    \item \textcolor{accent}{This leads to mispriced options and poor risk management}
+\end{itemize}
+\begin{center}
+\fcolorbox{navy}{white}{%
+\parbox{0.8\linewidth}{\centering \vspace{2mm}
+\textcolor{accent}{\Large $\sigma_t^2 = \omega + \alpha \varepsilon_{t-1}^2 + \beta \sigma_{t-1}^2$} \vspace{2mm}}}
+\end{center}
+\end{frame}
+
+% --- SLIDE 4: RESEARCH QUESTION ---
+\begin{frame}{Research Question}
+\begin{center}
+\Large \textcolor{navy}{``Does regime-switching improve volatility forecasts\\ over standard GARCH models?''}
+\end{center}
+\vspace{5mm}
+\begin{itemize}
+    \item Compare GARCH(1,1) vs. Markov-Switching GARCH
+    \item Evaluate using \textcolor{accent}{MSE} and \textcolor{accent}{VaR backtesting}
+\end{itemize}
+\end{frame}
+
+% ===== SECTION 2: METHODOLOGY =====
+\section{Methodology}
+
+% --- SLIDE 5: MODEL ---
+\begin{frame}{GARCH(1,1) Specification}
+\begin{equation}
+\sigma_t^2 = \omega + \alpha \varepsilon_{t-1}^2 + \beta \sigma_{t-1}^2
+\end{equation}
+\vspace{3mm}
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Parameter} & \textbf{Definition} \\
+\midrule
+$\omega$ & Long-run variance \\
+$\alpha$ & Reaction to past shocks \\
+$\beta$ & Persistence of volatility \\
+\bottomrule
+\end{tabular}
+\end{center}
+\vspace{2mm}
+\textcolor{accent}{Constraint:} $\alpha + \beta < 1$ for stationarity
+\end{frame}
+
+% ===== SECTION 3: RESULTS =====
+\section{Results}
+
+% --- SLIDE 6: KEY FINDING ---
+\begin{frame}{Main Result}
+\begin{block}{Finding \#1}
+MS-GARCH reduces MSE by \textcolor{accent}{18\%} compared to standard GARCH
+\end{block}
+\vspace{3mm}
+\begin{itemize}
+    \item Significant improvement in crisis periods (2008, 2020)
+    \item \textcolor{accent}{Regime 1:} Low volatility (70\% of time)
+    \item \textcolor{accent}{Regime 2:} High volatility (30\% of time)
+\end{itemize}
+\end{frame}
+
+% --- SLIDE 7: COMPARISON TABLE ---
+\begin{frame}{Model Comparison}
+\centering
+\begin{tabular}{l c c c}
+\toprule
+\textbf{Model} & \textbf{AIC} & \textbf{BIC} & \textbf{MSE} \\
+\midrule
+GARCH(1,1) & -4.52 & -4.48 & 0.034 \\
+MS-GARCH & \textcolor{accent}{-4.81} & \textcolor{accent}{-4.75} & \textcolor{accent}{0.028} \\
+\bottomrule
+\end{tabular}
+\vspace{3mm}
+\par \small \textcolor{navy}{Lower is better for all metrics}
+\end{frame}
+
+% ===== SECTION 4: CONCLUSION =====
+\section{Conclusion}
+
+% --- SLIDE 8: TAKEAWAYS ---
+\begin{frame}{Key Takeaways}
+\begin{enumerate}
+    \item \textcolor{accent}{MS-GARCH outperforms} GARCH in crisis periods
+    \item Regime persistence is high (transition probability $>$ 95\%)
+    \item \textbf{Practical implication:} Use MS-GARCH for VaR in turbulent markets
+\end{enumerate}
+\end{frame}
+
+% --- SLIDE 9: THANK YOU ---
+\begin{frame}{Thank You}
+\begin{center}
+\Large \textcolor{navy}{Questions?}
+\vspace{5mm}
+\normalsize
+Your Name \\
+\href{mailto:your.email@university.edu}{your.email@university.edu} \\
+\vspace{3mm}
+\small \textcolor{accent}{QR code to thesis here (optional)}
+\end{center}
+\end{frame}
+
+\end{document}

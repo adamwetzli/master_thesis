@@ -1336,7 +1336,7 @@ USDTRY, USDZAR, USDMXN, and, marginally, USDCNH. The seven G7 majors collectivel
 execute zero trades in fold 2, with NZDUSD executing zero trades in either fold. We interpret this not as majors underperforming in the sense of trading at reduced profitability 
 since for the majority of majors in fold 2 there is no trading activity to evaluate at all. This happened primarilly due to the conformal veto, which, at the significance levels 
 the pair-level Optuna study converged on, rejects every candidate signal.\footnote{The reference distribution a pair's M2 confidence is compared against is the same pooled mix for 
-all 15 instruments. If EM pairs generate far more trade rows (which they do), the pooled calibration set is dominated by EM-pair mistake statistics. A major's M2 confidence score 
+all 11 instruments. If EM pairs generate far more trade rows (which they do), the pooled calibration set is dominated by EM-pair mistake statistics. A major's M2 confidence score 
 then gets benchmarked against "how confident is M2 typically when an EM-pair trade goes wrong" rather than against its own pair's baseline. 
 If majors' M1/M2 score distributions sit on a different scale (which they likely do, given fewer/weaker patterns to learn from), this pooling can make majors' p-values look 
 unremarkable almost by construction, thus gating them out regardless of whether they have a small but real edge.} 
@@ -1623,7 +1623,7 @@ Additionally, the dataset contains multiple instances of interpolation across ex
 
 Taken together, the production results reinforce rather than resolve the concerns raised at the tournament stage. The single-architecture, pair-tuned design again correctly 
 identifies that most G7 majors offer no exploitable edge under this feature set and architecture\footnote{The reference distribution a pair's M2 confidence is compared against is the same pooled mix for 
-all 15 instruments. If EM pairs generate far more trade rows (which they do), the pooled calibration set is dominated by EM-pair mistake statistics. A major's M2 confidence score 
+all 11 instruments. If EM pairs generate far more trade rows (which they do), the pooled calibration set is dominated by EM-pair mistake statistics. A major's M2 confidence score 
 then gets benchmarked against "how confident is M2 typically when an EM-pair trade goes wrong" rather than against its own pair's baseline. 
 If majors' M1/M2 score distributions sit on a different scale (which they likely do, given fewer/weaker patterns to learn from), this pooling can make majors' p-values look 
 unremarkable almost by construction, thus gating them out regardless of whether they have a small but real edge.}, such that it now abstains from them almost entirely rather than underperforming on them. 
@@ -1843,7 +1843,7 @@ permissive $0.19$-$0.20$ for EURUSD and USDCNH in production) and it is this pai
 that determines whether a pair trades at all. The neglect to trade majors in both phases is a direct consequence of the Optuna study converging on tight $\varepsilon$ values 
 for exactly those pairs, which is arguably the "execution guardrail" objective's clearest success (compare with sections \ref{sec:problem_statement} and \ref{sec:research_objectives}).
 \footnote{We remind: Under the tournament and production architecture the reference distribution a pair's M2 confidence is compared against is the same pooled mix for 
-all 15 instruments. If EM pairs generate far more trade rows (which they do), the pooled calibration set is dominated by EM-pair mistake statistics. A major's M2 confidence score 
+all 11 instruments. If EM pairs generate far more trade rows (which they do), the pooled calibration set is dominated by EM-pair mistake statistics. A major's M2 confidence score 
 then gets benchmarked against "how confident is M2 typically when an EM-pair trade goes wrong" rather than against its own pair's baseline. 
 If majors' M1/M2 score distributions sit on a different scale (which they likely do, given fewer/weaker patterns to learn from), this pooling can make majors' p-values look 
 unremarkable almost by construction, thus gating them out regardless of whether they have a small but real edge.} 
