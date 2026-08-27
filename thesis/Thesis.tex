@@ -1851,6 +1851,98 @@ The framework correctly learns, that most G7 majors do not offer an exploitable 
 rather than requiring it to be imposed manually.
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% ADD HERE THE FINDINGS OF THE EXPERIMENT?
+
+This discussion of local adaptation, however, has so far been confined to the domain of trading parameters like the Kelly fraction or stop-loss multipliers. 
+A more fundamental, architectural form of 'localness' concerns the conformal calibration itself. As noted in Section 4.1.3, the reference distribution a pair's 
+M2 confidence is compared against is the same pooled mix for all eleven instruments. If EM pairs generate far more trade rows and dominate the calibration set, 
+a Major's M2 confidence score may be unfairly benchmarked against "how confident M2 typically is when an EM-pair trade goes wrong". 
+This pooling effect could systematically gate out Majors that possess a small but real edge, simply because their score distributions sit on a different scale.
+
+To investigate this, a supplementary experiment was conducted.
+
+\subsubsection{The Impact of Pair-Specific Conformal Calibration}
+
+In this experiment, we modified the conformal calibration procedure from a pooled, cross-pair reference set to a pair-specific one. For each currency pair, 
+the calibration set of M2 confidence scores for incorrect M1 signals was built exclusively from that same pair's historical mistakes across the sliding memory window, 
+eliminating the EM-pair dominance effect.
+
+
+\input{../data/tables/experiment/trading_hps_table/hps_XGBoost_experiment.tex}
+
+
+\input{../data/tables/experiment/strategy_comparison/strategy_comp_XGBoost_experiment.tex}
+
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{ll|rrr}
+\toprule
+Pair & Group & Return\% & Sharpe & Trades \\
+\midrule
+USDZAR & EM     & 34.63 & 12.94 & 123 \\
+USDMXN & EM     & 8.28  & 8.82  & 449 \\
+USDTRY & EM     & 4.62  & 11.74 & 595 \\
+USDCNH & EM     & 1.38  & 3.87  & 518 \\
+\midrule
+USDJPY & Major  & 1.26  & 1.85  & 812 \\
+NZDUSD & Major  & 0.89  & 0.71  & 190 \\
+USDCAD & Major  & 0.08  & 0.36  & 146 \\
+AUDUSD & Major  & 0.03  & 0.06  & 211 \\
+USDCHF & Major  & -1.12 & -1.64 & 77  \\
+EURUSD & Major  & -1.66 & -2.56 & 334 \\
+GBPUSD & Major  & -2.61 & -2.44 & 451 \\
+\bottomrule
+\end{tabular}
+\caption{Pair-level XGBoost experiment performance, global test fold, drawn from figures \ref{fig:production_experiment_result_XGBoost_1}-\ref{fig:production_experiment_result_XGBoost_4}}
+\label{tab:pair_level_xgb_production_experiment}
+\end{table}
+
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}[t]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../data/figures/backtests/experiment_results_XGBoost_part1.png}
+        \caption{Backtest Result of XGBoost During Production Experiment}
+        \label{fig:production_experiment_result_XGBoost_1}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../data/figures/backtests/experiment_results_XGBoost_part2.png}
+        \caption{Backtest Result of XGBoost During Production Experiment (Continued)}
+        \label{fig:production_experiment_result_XGBoost_2}
+    \end{minipage}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}[t]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../data/figures/backtests/experiment_results_XGBoost_part3.png}
+        \caption{Backtest Result of XGBoost During Production Experiment (Continued)}
+        \label{fig:production_experiment_result_XGBoost_3}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../data/figures/backtests/experiment_results_XGBoost_part4.png}
+        \caption{Backtest Result of XGBoost During Production Experiment (Continued)}
+        \label{fig:production_experiment_result_XGBoost_4}
+    \end{minipage}
+\end{figure}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \subsection{Synthesis: Revisiting the Overarching Research Question}
 
 Bringing these five threads together, this thesis's answer to whether an ML classifier can drive a Forex trading model successfully is layered. A raw classifier cannot as the M1-only 
