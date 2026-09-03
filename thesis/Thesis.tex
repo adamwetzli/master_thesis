@@ -384,20 +384,27 @@ from random market fluctuations a primary challenge for the quantification of un
 As argued by \textcite{lopez_de_prado_advances_2018}, a simple, single-layer classification model is rarely sufficient in these domains 
 because the low signal-to-noise ratio prevents a single model from simultaneously learning the "side" (directional bet) and 
 the "size" (statistical conviction) of a trade without overfitting to noise. 
-To solve this, \textcite{shafer_tutorial_2008} argue that the strength of conformal prediction lies in its ability to provide a measure of
-confidence for every individual prediction based on how well it fits with past examples. 
-This allows for the generation of confidence sets rather than mere point estimates and defines the conformal prediction \( p \)-value for a new
-observation as:
+\textcite{shafer_tutorial_2008} show that a general recipe for converting any per-observation score into a valid $p$-value is to compare 
+a new score against a held-out calibration sample of scores from the same population, and count how atypically extreme the new score is 
+relative to that sample. For a calibration sample $\{\alpha_i\}_{i=1}^k$ and a new observation's score $\alpha_{\text{new}}$, this p-value is
 
 \begin{equation}
 p = \frac{\left\|\{i = 1, \ldots, k : \alpha_i \geq \alpha_{\text{new}}\}\right\| + 1}{k + 1}
 \label{eq:conformal_p}
 \end{equation}
 
-where \( k \) is the size of the calibration set, \( \alpha_i \) represents the non-conformity measure for the 
-\( i \)-th calibration point, and \( \alpha_{\text{new}} \) is the non-conformity score for the new observation. 
-The calibration set \( \{\alpha_i\}_{i=1}^{k} \) is restricted to instances where M1's directional call was 
-subsequently found to be incorrect. In this research, the non-conformity score for the M2 meta-model is defined as:
+In the classical (split-)conformal prediction setting of \textcite{shafer_tutorial_2008}, this construction is used to build 
+marginal-coverage prediction sets: the calibration sample is drawn from the same, unconditioned population the model 
+will see at deployment, so exchangeability between calibration and test scores holds unconditionally and equation \ref{eq:conformal_p} 
+inherits a marginal coverage guarantee over that whole population.
+
+This research adapts the same $p$-value machinery to a different, more restricted setting. Rather than drawing $\{\alpha_i\}$ from 
+the general population of M1 signals, the calibration sample is restricted to instances where M1's directional call was 
+subsequently found to be incorrect. Because of this restriction, exchangeability between $\{\alpha_i\}$ and $\alpha_{\text{new}}$ 
+only holds conditionally, under the assumption that the new signal is itself a mistake, and equation \ref{eq:conformal_p} should 
+therefore be read as a one-sided tail test rather than as the marginal-coverage construction above. \Cref{sec:conformal_preds_and_qfilter} 
+makes this hypothesis explicit. What follows here defines only the non-conformity score itself. In this research, the 
+non-conformity score for the M2 meta-model is defined as:
 
 \begin{equation}
 \alpha = \hat{P}_{\text{M2}}(\text{Signal is Correct})
@@ -406,14 +413,27 @@ subsequently found to be incorrect. In this research, the non-conformity score f
 
 where \( \hat{P}_{\text{M2}}(\cdot) \) denotes the predicted probability from the M2 model, 
 which describes whether the primary (M1) model's directional bet matches the actual market outcome.
-This link transforms raw, uncalibrated success probabilities into statistically valid $p$-values against the empirical distribution of M2's confidence on M1's historical 
-mistakes. Because the calibration set $\{\alpha_i\}$ represents this failure class specifically rather than a generic exchangeable population, conformity to it is the 
-undesirable outcome. As such a large $p$-value indicates that $\alpha_{\text{new}}$ blends in with the confidence scores M2 has historically assigned to mistakes, while a small 
-$p$-value indicates $\alpha_{\text{new}}$ is atypically high relative to that failure distribution. A trade is therefore only executed if its $p$-value does not exceed 
-the significance threshold $\varepsilon$, i.e. $p \leq \varepsilon$, which rejects the null hypothesis that the signal is a mistake at level $\varepsilon$. Signals whose 
-$p$-value exceeds $\varepsilon$ conform too closely to the historical mistake distribution and are filtered out as the conformal veto's "non-conforming" outliers are, 
-by construction, the ones retained rather than discarded.
 
+Concretely, define the empirical cumulative distribution of M2 confidence conditional on M1 having been wrong,
+
+\begin{equation}
+\hat{F}_{\text{error}}(s) = P\big(\hat{P}_{\text{M2}}(\text{Signal is Correct}) \leq s \;\big|\; \text{M1 is wrong}\big) 
+= \frac{1}{k}\sum_{i=1}^{k} \mathbb{1}[\alpha_i \leq s]
+\end{equation}
+
+Equation \ref{eq:conformal_p} is then (up to the standard finite-sample $+1$ correction that keeps $p$ valid for any $k$) the 
+upper-tail probability of $\hat{F}_{\text{error}}$ evaluated at the new observation's score, $p \approx 1 - \hat{F}_{\text{error}}(\alpha_{\text{new}})$. 
+Under the null hypothesis $H_0$: this signal is a mistake, a large $p$-value indicates that $\alpha_{\text{new}}$ blends in with the confidence 
+scores M2 has historically assigned to genuine mistakes, while a small $p$-value indicates $\alpha_{\text{new}}$ is atypically high relative to that 
+failure distribution, i.e. evidence against $H_0$. A trade is therefore only executed if its $p$-value does not exceed 
+the significance threshold $\varepsilon$, i.e. $p \leq \varepsilon$, which rejects $H_0$ at level $\varepsilon$ and controls the rate at which genuine 
+mistakes are mistakenly let through, in the same sense as a one-sided hypothesis test's Type-I error rate, rather than as a marginal 
+coverage guarantee over the general population of signals. Signals whose $p$-value exceeds $\varepsilon$ conform too closely to the historical 
+mistake distribution and are filtered out. The conformal veto's "non-conforming" outliers are, by construction, the ones retained rather 
+than discarded. This construction is closer in spirit to conformal anomaly detection, where a calibration sample drawn from a single reference 
+class (here, historical M1 mistakes) is used to test whether a new observation conforms to that class specifically, and the chosen 
+significance level bounds the rate at which a genuine member of that class is mistakenly judged non-conforming \parencite{laxhammar_inductive_2015}, 
+than to the unconditioned marginal-coverage construction of classical split-conformal prediction.
 
 %%%%%%%%%%%%%%%
 % METHODOLOGY %
@@ -963,12 +983,21 @@ hypothesis test performed on top of it, which we refer to as conformal-q filteri
 of M2 confidence scores that were assigned, in-sample, to instances where M1's directional call was subsequently found to be wrong against the triple-barrier ground truth. 
 This set is built from a sliding memory window of previous outer folds plus the current fold's own mistakes and is always 
 re-scored through the fold's live M2 instance rather than reusing frozen probabilities from previously discarded model, since conformal calibration is only valid when calibration 
-and live scores originate from the same scoring function. Given a new M1 signal with meta-confidence $\alpha$ (see eq. \ref{eq:nonconformity}), we compute the empirical 
-conformal $p$-value according to equation \ref{eq:conformal_p}. Under the null hypothesis $H_0$: "this signal is a mistake". The signal is acted upon only if $p \leq 1 - \alpha$, 
+and live scores originate from the same scoring function. Given a new M1 signal with meta-confidence $\alpha_{\text{new}}$ (see eq. \ref{eq:nonconformity}), we compute the empirical 
+conformal $p$-value according to equation \ref{eq:conformal_p}. Under the null hypothesis $H_0$: "this signal is a mistake" and defining the conformal confidence 
+$c = 1 - p$, the signal is acted upon only if $p \leq \varepsilon$, equivalently $c \geq 1 - \varepsilon$, 
 i.e. only if its confidence is high enough to be an unusually rare occurrence within the empirical distribution of past failures. 
-Otherwise it is vetoed and the position is left flat. Equivalently, since $p$ is a monotonically decreasing transform of $\alpha$, this is the same as requiring $p$ to exceed 
-the $(1-\varepsilon)$-quantile of the calibration set \( \{\alpha_i\}_{i=1}^{k} \), which is exactly what meta sig. controls per pair and fold in table \ref{tab:hps_XGBoost_tournament}. 
-Thus again, a lower meta significance pushes this quantile further into the tail of the mistake distribution, producing a stricter, more selective veto.
+Otherwise it is vetoed and the position is left flat. Since $p$ is a monotonically decreasing transform of $\alpha_{\text{new}}$ (equation \ref{eq:conformal_p} is non-increasing 
+in $\alpha_{\text{new}}$), this decision rule is equivalent to requiring $\alpha_{\text{new}}$ itself to exceed the $(1-\varepsilon)$-quantile of the calibration set 
+$\{\alpha_i\}_{i=1}^{k}$, which is exactly what meta sig. controls per pair and fold in table \ref{tab:hps_XGBoost_tournament}. In summary,
+
+\begin{equation}
+c = 1 - p, \qquad \text{act} \iff p \leq \varepsilon \iff c \geq 1-\varepsilon \iff \alpha_{\text{new}} \geq Q_{1-\varepsilon}\left(\{\alpha_i\}_{i=1}^k\right),
+\end{equation}
+
+where $Q_{1-\varepsilon}(\cdot)$ denotes the empirical $(1-\varepsilon)$-quantile of the calibration nonconformity scores. Thus again, a lower meta significance pushes 
+this quantile further into the tail of the mistake distribution, producing a stricter, more selective veto.
+
 
 \begin{figure}[H]
     \centering
@@ -1097,10 +1126,11 @@ Framing panel B as a standard binary classifier, with the positive class defined
 visible in the previous section \ref{sec:conformal_preds_and_qfilter}. Recall (or sensitivity), $\frac{\text{TP}}{\text{TP}+\text{FN}}$, measures what fraction of all signals, that would have been correct, were 
 actually accepted, i.e. the opportunity cost of the veto. Specificity, $\frac{\text{TN}}{\text{TN}+\text{FP}}$, measures how reliably the filter identifies true mistakes. 
 Its complement, the empirical false-positive rate $\frac{\text{FP}}{\text{FP}+\text{TN}}$, the fraction of true mistakes that nonetheless slipped through the veto, is the 
-quantity directly relevant to calibration as this empirical rate should track the pair- and fold-averaged significance level $\varepsilon$ if the calibration and test time 
-score distributions are exchangeable. Table \ref{tab:nested_confusion_summary} reports these three quantities, 
-together with the ratio of the empirical false-positive rate to $\varepsilon$, our proxy for whether the calibration guarantee held in practice (a ratio near 1 indicating tight 
-calibration, below 1 indicating conservative over-coverage, and above 1 indicating a violated guarantee).
+quantity directly relevant to calibration: under $H_0$, this is exactly the Type-I error rate of the conformal-tail test of section \ref{sec:conformal_preds}, which should 
+track the pair- and fold-averaged significance level $\varepsilon$ if $\{\alpha_i\}$ and $\alpha_{\text{new}}$ remain conditionally exchangeable under $H_0$ at test time. 
+Table \ref{tab:nested_confusion_summary} reports these three quantities, together with the ratio of the empirical false-positive rate to $\varepsilon$, our proxy for whether 
+the nominal Type-I error rate held in practice (a ratio near 1 indicating a well-calibrated test, below 1 indicating a conservative, stricter than nominal filter, and above 1 
+indicating that the test let through more mistakes than its target $\varepsilon$).
 
 \begin{table}[H]
 \centering
@@ -1134,22 +1164,22 @@ through, correct and incorrect signals alike, whereas fold 2's sharper separabil
 Second, the empirical false-positive rate does not track $\varepsilon$ uniformly well across architectures. In fold 1, only XGBoost 
 comes close to its theoretical target (ratio $1.03$). LightGBM is mildly over its target (ratio $1.22$), while RandomForest, ExtraTrees, LSTM, and GRU all substantially exceed 
 it, with RandomForest, ExtraTrees, and LSTM more than doubling their nominal false-positive rate (ratios of $2.23$-$2.30$). In other words, for four of the six architectures, the 
-conformal guarantee did not hold empirically in the first fold, because the filter let through roughly twice as many true mistakes as its tuned $\varepsilon$ promised. By fold 2 the 
-picture improves markedly, most models move into conservative over-coverage (ratios $0.42$-$0.87$), meaning the filter ends up stricter than its nominal guarantee 
-required, with the single exception of LSTM, whose ratio of $1.10$ is the only one across all twelve model-fold cells in fold 2 that still exceeds 1. LSTM is therefore the only 
-architecture that fails to achieve its stated guarantee in either fold, reinforcing the diagnosis from the previous section that its M2 confidence scores are a 
+nominal Type-I error rate did not hold empirically in the first fold, because the filter let through roughly twice as many true mistakes as its tuned $\varepsilon$ promised. By fold 2 the 
+picture improves markedly, most models move into conservative, stricter territory (ratios $0.42$-$0.87$), meaning the filter ends up admitting fewer mistakes than its 
+nominal significance level would allow, with the single exception of LSTM, whose ratio of $1.10$ is the only one across all twelve model-fold cells in fold 2 that still exceeds 1. LSTM is therefore the only 
+architecture that fails to track its nominal Type-I error rate in either fold, reinforcing the diagnosis from the previous section that its M2 confidence scores are a 
 comparatively weak basis for the conformal test, rather than this being a fold-specific artifact.
 
 \medskip
 
 We interpret the fold 1 breakdown as most plausibly driven by a combination of factors rather than a single cause. As already mentioned several times, the calibration set in fold 1 
 is built from a much smaller memory window (little to no prior fold history to draw on yet) and the underlying M1/M2 separability is itself weaker in fold 1 
-(the shallow logistic fits discussed previously in section \ref{sec:conformal_preds_and_qfilter}). Furthermore, the walk-forward calibration only delivers the conformal exchangeability 
-guarantee with a lot more data, so a small, less representative early calibration set is exactly where a violation would be expected to surface first. 
-That XGBoost alone tracks its guarantee tightly even under these conditions is a point in its favor as the architecture whose M2 confidence 
-scores are best behaved, independent of and prior to the accuracy comparison. We note as a limitation that each ratio in table \ref{tab:nested_confusion_summary} is a single 
+(the shallow logistic fits discussed previously in section \ref{sec:conformal_preds_and_qfilter}). Furthermore, the walk-forward calibration only approaches the conditional 
+exchangeability that the test in section \ref{sec:conformal_preds} relies on with a lot more data, so a small, less representative early calibration set is exactly where a violation of 
+that assumption would be expected to surface first. That XGBoost alone tracks its nominal Type-I error rate tightly even under these conditions is a point in its favor as the 
+architecture whose M2 confidence scores are best behaved, independent of and prior to the accuracy comparison. We note as a limitation that each ratio in table \ref{tab:nested_confusion_summary} is a single 
 point estimate from one walk-forward realization rather than an average over repeated resamples, so these should be read as descriptive diagnostics of this particular tournament run 
-rather than as a formal statistical test of coverage. Bootstrapping the calibration set across pairs, or repeating the outer split with a different block boundary, 
+rather than as a formal statistical test of Type-I error control. Bootstrapping the calibration set across pairs, or repeating the outer split with a different block boundary, 
 would be a natural way to attach an uncertainty band to these ratios in future work.
 
 \medskip
@@ -1220,7 +1250,7 @@ In the strict sense of a proper scoring rule averaged over the entire probabilit
 the unconditional base rate for the great majority of architectures tested.
 In contrast, fold 2 tells a materially different story as every single model now beats its own naive baseline, by margins of $0.85\%$ to $1.42\%$ relative, with LightGBM showing 
 the largest improvement and LSTM the smallest. This is modest in absolute terms, but it is a second, fully independent confirmation, via a proper scoring rule rather than 
-via acceptance counts or coverage ratios, of the fold over fold improvement in M2's discriminative quality documented throughout this chapter.
+via acceptance counts or Type-I error ratios, of the fold over fold improvement in M2's discriminative quality documented throughout this chapter.
 
 \begin{table}[H]
 \centering
@@ -1253,7 +1283,7 @@ delivers $0.67$, and LSTM predicts $0.83$ but delivers $0.71$, a systematic over
 from. These are precisely the three architectures whose empirical false-positive rate most severely exceeded its nominal target in fold 1 (ratios of $2.23$, $2.26$, and $2.30$ 
 respectively. See table \ref{tab:nested_confusion_summary}). An overconfident raw score offers a direct, mechanistic explanation for that violation, because the scores regularly 
 overstate their own reliability, results in the calibration set quantile being inflated and the conformal test to admit more true mistakes than its target rate allows. 
-XGBoost's fold 1 tail, by contrast, sits essentially on the diagonal ($0.71 \to 0.79$, if anything slightly underconfident), consistent with its near-perfect coverage ratio of 
+XGBoost's fold 1 tail, by contrast, sits essentially on the diagonal ($0.71 \to 0.79$, if anything slightly underconfident), consistent with its near-perfect Type-I error ratio of 
 $1.03$, and LightGBM's tail behaves similarly ($0.71 \to 0.75$), consistent with its comparatively mild violation of $1.22$.
 
 \medskip
@@ -1262,8 +1292,8 @@ By fold 2, every architecture's tail pulls in close to or above the diagonal, co
 surfaces a genuine tension worth being explicit about rather than glossing over. LSTM's fold 2 tail is strongly underconfident ($0.72 \to 0.85$), arguably the best-behaved raw 
 probability calibration of any architecture in either fold, and yet LSTM remains the single architecture whose conformal decision still exceeded its nominal false-positive rate 
 target in fold 2 (ratio $1.10$, table \ref{tab:nested_confusion_summary}). This is not a contradiction so much as a reminder that the two diagnostics test different things as a 
-reliability diagram asks whether the raw probability is an honest estimate of $P(\text{correct})$, while the conformal coverage ratio asks whether calibration set and live 
-non-conformity scores remain exchangeable. 
+reliability diagram asks whether the raw probability is an honest estimate of $P(\text{correct})$, while the Type-I error ratio asks whether calibration set and live 
+non-conformity scores remain conditionally exchangeable under $H_0$. 
 \textcite[377 ff.]{shafer_tutorial_2008}'s central appeal is precisely that conformal validity does not require the underlying score to be a 
 calibrated probability at all, only that its distribution be exchangeable between calibration and test time. LSTM's fold 2 result is a case where the raw score looks excellent 
 in isolation while exchangeability itself still appears to be mildly violated, plausibly by residual regime drift between the memory window and the live fold, a distinction the 
@@ -1735,10 +1765,10 @@ The purged and nested walk-forward tournament identified XGBoost as the RRF-aggr
 in section \ref{sec:production_performance} did not overturn this choice. XGBoost's advantages were reconfirmed rather than merely assumed. Three 
 threads of evidence converge on this. First, XGBoost was the only architecture whose empirical false-positive rate tracked its nominal conformal significance level tightly in fold 1 
 (ratio $1.03$, see table \ref{tab:nested_confusion_summary}), while the two recurrent architectures (LSTM, GRU) and the bagged tree ensembles (RandomForest, ExtraTrees) exceeded their 
-nominal target by a factor of two or more. Second, XGBoost's reliability diagram tail sat very close to the diagonal in fold 1, giving a mechanistic explanation for the coverage result 
+nominal target by a factor of two or more. Second, XGBoost's reliability diagram tail sat very close to the diagonal in fold 1, giving a mechanistic explanation for the Type-I error result 
 above it, since an overconfident raw score is what inflates the calibration set quantile and lets true mistakes slip through. Third, LSTM was the single architecture whose 
-conformal guarantee failed in both folds and it did so even in fold 2, where its raw Brier calibration was, paradoxically, the best-behaved of any architecture. This is not a 
-contradiction but a genuine methodological finding, since a well-calibrated probability and an exchangeable non-conformity score are two distinct properties and a model can hold 
+nominal Type-I error rate was violated in both folds and it was violated even in fold 2, where its raw Brier calibration was, paradoxically, the best-behaved of any architecture. This is not a 
+contradiction but a genuine methodological finding, since a well-calibrated probability and a conditionally exchangeable non-conformity score are two distinct properties and a model can hold 
 one without the other. Recurrent architectures, at least under the endogenous feature set and very limited data used here, appear to be better probability estimators in isolation but 
 worse foundations for a conformal veto, which is arguably the more decision-relevant of the two properties for this pipeline.
 
@@ -1771,8 +1801,8 @@ better, which matters for how the result should be interpreted going forward, si
 
 \medskip
 
-Set against this is the violation of the historical coverage reported in section \ref{sec:confusion_matrices_tournament} (see table \ref{tab:nested_confusion_summary}) where in fold 1, 
-four of six architectures let through roughly twice as many true mistakes as their tuned significance level promised and the calibration guarantee only came close to holding once the 
+Set against this is the violation of the nominal Type-I error rate reported in section \ref{sec:confusion_matrices_tournament} (see table \ref{tab:nested_confusion_summary}) where in fold 1, 
+four of six architectures let through roughly twice as many true mistakes as their tuned significance level promised and the nominal Type-I error rate only came close to holding once the 
 sliding memory window had accumulated a full fold's worth of history. Practically, this means the referee is least reliable exactly when it is most needed, early in a live deployment, 
 before its calibration set has matured, which is a genuine limitation of the walk-forward conformal design as implemented here rather than an artifact of any single architecture's 
 weaknesses.
