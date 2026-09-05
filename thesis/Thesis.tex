@@ -120,10 +120,15 @@ to trade.
 
 \medskip
 
-Overall, this thesis does not claim to have found a uniformly profitable Forex strategy, since the empirical record does not support that claim. It does show that a
-classifier-driven pipeline, built around statistical skepticism rather than raw predictive optimization, can concentrate a modest but conformally validated
-edge in a handful of pairs while remaining transparent about its own failure modes. This is offered as a proof of concept for the meta-verification framework
-itself, rather than as evidence of a deployable, general-purpose trading system.
+Overall, this thesis does not claim to have found a uniformly profitable Forex strategy, since the empirical record does not support that claim. 
+It does show that a classifier-driven pipeline, built around statistical skepticism rather than raw predictive optimization, can concentrate a modest edge in a handful 
+of pairs under an empirical conformal-style selective inference procedure whose calibration is evaluated out-of-sample. The procedure does not assert formal 
+distribution-free validity in the strict exchangeable sense, an assumption that FX data manifestly violates, but rather serves as a disciplined heuristic for filtering signals 
+against a historically conditioned mistake distribution. The results themselves illustrate the practical limits of this approach: four out of six architectures violate 
+nominal coverage in the first fold, underscoring that this is a proof of concept for the meta-verification framework itself, rather than evidence of a deployable, 
+general-purpose trading system. The contribution lies not in the profitability of any particular strategy, but in the transparency with which the pipeline reports and 
+diagnoses its own failure modes.
+
 \end{abstract}
 
 \pagebreak
@@ -402,7 +407,7 @@ This research adapts the same $p$-value machinery to a different, more restricte
 the general population of M1 signals, the calibration sample is restricted to instances where M1's directional call was 
 subsequently found to be incorrect. Because of this restriction, exchangeability between $\{\alpha_i\}$ and $\alpha_{\text{new}}$ 
 only holds conditionally, under the assumption that the new signal is itself a mistake, and equation \ref{eq:conformal_p} should 
-therefore be read as a one-sided tail test rather than as the marginal-coverage construction above. \Cref{sec:conformal_preds_and_qfilter} 
+therefore be read as a one-sided tail test rather than as the marginal-coverage construction above. Section \ref{sec:conformal_preds_and_qfilter} 
 makes this hypothesis explicit. What follows here defines only the non-conformity score itself. In this research, the 
 non-conformity score for the M2 meta-model is defined as:
 
@@ -1880,58 +1885,52 @@ unremarkable almost by construction, thus gating them out regardless of whether 
 The framework correctly learns, that most G7 majors do not offer an exploitable edge under this feature set and architecture, thus enforces that conclusion through statistical veto 
 rather than requiring it to be imposed manually.
 
+\medskip
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+This reading, however, cannot be taken at face value. The very property that makes the veto look like a clean success, namely that it converges on tight $\varepsilon$ values 
+for majors and permissive ones for EM pairs, is exactly what the pooling mechanism flagged above would produce whether or not the majors have a real, if smaller, edge to 
+exploit. A shared calibration set dominated by EM-pair mistakes cannot, by construction, distinguish "this pair has no edge" from "this pair's M2 confidence lives on a 
+different scale to the EM pairs that dominate its own reference distribution". The tournament and production results are therefore consistent with the guardrail objective 
+succeeding, but they are equally consistent with the guardrail objective succeeding for the wrong reason. Deciding between these two readings requires holding the 
+architecture, the HPO search, and the test fold fixed while changing only the calibration set's composition, which motivates the supplementary experiment below.
 
-% ADD HERE THE FINDINGS OF THE EXPERIMENT?
-
-This discussion of local adaptation, however, has so far been confined to the domain of trading parameters like the Kelly fraction or stop-loss multipliers. 
-A more fundamental, architectural form of 'localness' concerns the conformal calibration itself. As noted in Section 4.1.3, the reference distribution a pair's 
-M2 confidence is compared against is the same pooled mix for all eleven instruments. If EM pairs generate far more trade rows and dominate the calibration set, 
-a Major's M2 confidence score may be unfairly benchmarked against "how confident M2 typically is when an EM-pair trade goes wrong". 
-This pooling effect could systematically gate out Majors that possess a small but real edge, simply because their score distributions sit on a different scale.
-
-To investigate this, a supplementary experiment was conducted.
 
 \subsubsection{The Impact of Pair-Specific Conformal Calibration}
 
 In this experiment, we modified the conformal calibration procedure from a pooled, cross-pair reference set to a pair-specific one. For each currency pair, 
 the calibration set of M2 confidence scores for incorrect M1 signals was built exclusively from that same pair's historical mistakes across the sliding memory window, 
-eliminating the EM-pair dominance effect.
-
+eliminating the EM-pair dominance effect described above. Every other component of the pipeline, the XGBoost architecture, the joint M1/M2 hyperparameter search, and 
+the global test fold, was left unchanged relative to the production run of section \ref{sec:production_performance}, so that any difference in outcome can be attributed 
+specifically to the calibration set's composition rather than to something elsewhere in the pipeline.
 
 \input{../data/tables/experiment/trading_hps_table/hps_XGBoost_experiment.tex}
 
+Table \ref{tab:hps_XGBoost_experiment} reports the trading-level hyperparameters selected under this local calibration regime, in the same format as table 
+\ref{tab:hps_XGBoost_production}. The Kelly fraction again spans nearly the full admissible range, from $0.16$ for USDTRY to $0.94$ for AUDUSD, consistent with the 
+cross-sectional heterogeneity already documented in both the tournament and production phases. The most diagnostic row, however, is Meta Sig., since it is 
+precisely the threshold whose reference distribution changed between this experiment and the production run. Under pooled calibration, AUDUSD and USDCHF converged 
+on the tightest end of the search range ($0.01$ and $0.02$ respectively, see table \ref{tab:hps_XGBoost_production}), which, combined with a calibration set 
+dominated by EM-pair mistakes, was strict enough to gate every single one of their signals over the global test fold. Under pair-specific calibration, AUDUSD's 
+significance level relaxes by almost an order of magnitude, to $0.19$, the loosest value among all eleven pairs alongside USDMXN. USDCHF, by contrast, converges on 
+an almost identical nominal value, $0.02$, yet now admits $77$ trades rather than zero. This is the clearest possible illustration of the mechanism this experiment 
+was designed to isolate: Meta Sig. is not an absolute confidence level but a quantile of whatever calibration set it is measured against, so an unchanged nominal 
+threshold can correspond to a completely different real-world selectivity once the underlying reference population changes. EURUSD ($0.04$) and GBPUSD ($0.06$) 
+remain comparatively tight and yet, as with USDCHF, still clear enough of their own local threshold to generate several hundred trades each, again underscoring 
+that trade volume under pair-specific calibration is driven by the shape of each pair's own error distribution rather than by the nominal significance level alone.
 
 \input{../data/tables/experiment/strategy_comparison/strategy_comp_XGBoost_experiment.tex}
 
-
-\begin{table}[H]
-\centering
-\small
-\begin{tabular}{ll|rrr}
-\toprule
-Pair & Group & Return\% & Sharpe & Trades \\
-\midrule
-USDZAR & EM     & 34.63 & 12.94 & 123 \\
-USDMXN & EM     & 8.28  & 8.82  & 449 \\
-USDTRY & EM     & 4.62  & 11.74 & 595 \\
-USDCNH & EM     & 1.38  & 3.87  & 518 \\
-\midrule
-USDJPY & Major  & 1.26  & 1.85  & 812 \\
-NZDUSD & Major  & 0.89  & 0.71  & 190 \\
-USDCAD & Major  & 0.08  & 0.36  & 146 \\
-AUDUSD & Major  & 0.03  & 0.06  & 211 \\
-USDCHF & Major  & -1.12 & -1.64 & 77  \\
-EURUSD & Major  & -1.66 & -2.56 & 334 \\
-GBPUSD & Major  & -2.61 & -2.44 & 451 \\
-\bottomrule
-\end{tabular}
-\caption{Pair-level XGBoost experiment performance, global test fold, drawn from figures \ref{fig:production_experiment_result_XGBoost_1}-\ref{fig:production_experiment_result_XGBoost_4}}
-\label{tab:pair_level_xgb_production_experiment}
-\end{table}
+Table \ref{tab:strategy_comparison_XGBoost_experiment} reports a pooled average Sharpe ratio of $3.06$ ($\pm 5.60$) for the full M1+M2 (Conformal) strategy across 
+the eleven pairs, below the pooled $4.30$ ($\pm 6.65$) obtained under pooled calibration in the production run, but with a comparable ranking against the other 
+strategies reported in the same table: M1 Only averages $0.98$ ($\pm 10.15$), M1 + M2 (Fixed) $2.09$ ($\pm 8.28$), and M1 + M2 (Global) $2.81$ ($\pm 6.19$), 
+so the full conformal pipeline again dominates on mean Sharpe and, except relative to the pooled-calibration production run, on dispersion as well. That single 
+exception is worth dwelling on. Expressed as a ratio of standard deviation to mean, a rough proxy for how concentrated the pooled profitability is, the tournament's 
+pooled M1+M2 (Conformal) result was $4.50 / 1.97 \approx 2.28$, the pooled-calibration production result improves this to $6.65 / 4.30 \approx 1.55$, while this 
+pair-specific-calibration experiment sits at $5.60 / 3.06 \approx 1.83$, worse than production despite still improving on the tournament. This is consistent with 
+the pair-level evidence below: the production run's low apparent dispersion was achieved partly by simply excluding five Majors from trading altogether, which 
+removes their variance from the pool along with their (mostly negative) returns, whereas the experiment's higher dispersion reflects a more honest pool that now 
+includes both a genuinely improved USDJPY and several genuinely losing Majors. Disaggregating by pair, drawn from figures 
+\ref{fig:production_experiment_result_XGBoost_1}-\ref{fig:production_experiment_result_XGBoost_4}, makes this explicit.
 
 
 \begin{figure}[H]
@@ -1969,9 +1968,85 @@ GBPUSD & Major  & -2.61 & -2.44 & 451 \\
 \end{figure}
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{ll|rrr}
+\toprule
+Pair & Group & Return\% & Sharpe & Trades \\
+\midrule
+USDZAR & EM     & 34.63 & 12.94 & 123 \\
+USDMXN & EM     & 8.28  & 8.82  & 449 \\
+USDTRY & EM     & 4.62  & 11.74 & 595 \\
+USDCNH & EM     & 1.38  & 3.87  & 518 \\
+\midrule
+USDJPY & Major  & 1.26  & 1.85  & 812 \\
+NZDUSD & Major  & 0.89  & 0.71  & 190 \\
+USDCAD & Major  & 0.08  & 0.36  & 146 \\
+AUDUSD & Major  & 0.03  & 0.06  & 211 \\
+USDCHF & Major  & -1.12 & -1.64 & 77  \\
+EURUSD & Major  & -1.66 & -2.56 & 334 \\
+GBPUSD & Major  & -2.61 & -2.44 & 451 \\
+\bottomrule
+\end{tabular}
+\caption{Pair-level XGBoost experiment performance, global test fold, drawn from figures \ref{fig:production_experiment_result_XGBoost_1}-\ref{fig:production_experiment_result_XGBoost_4}}
+\label{tab:pair_level_xgb_production_experiment}
+\end{table}
+
+
+Table \ref{tab:pair_level_xgb_production_experiment} confirms that the pooling effect was real, but not uniformly favorable to the Majors, as the original hypothesis 
+anticipated. Pooling by group, the seven Majors now average a return of $\approx -0.45\%$ and a Sharpe of $\approx -0.52$ across the fold, compared to the 
+$\approx -0.03\%$ return and $\approx 0.22$ Sharpe they averaged under pooled calibration in the production run (table \ref{tab:pair_level_xgb_production}), while the 
+four EM/exotic pairs average a return of $\approx 12.23\%$ and a Sharpe of $\approx 9.34$, versus $\approx 27.28\%$ and $\approx 11.43$ under pooled calibration. In 
+other words, switching to pair-specific calibration made the average Major slightly worse off, not better, even though every Major now actually participates 
+in the market instead of being gated to zero. Several further observations qualify this headline result.
+
+\begin{itemize}
+\item \textbf{USDJPY is the clearest case in favor of the original pooling hypothesis.} Under pooled calibration it was one of only two Majors admitted to trade at 
+all, and it lost money doing so (return $-0.81\%$, Sharpe $-2.30$, $184$ trades, table \ref{tab:pair_level_xgb_production}). Under pair-specific calibration it not 
+only trades over four times as often ($812$ trades) but reverses sign entirely, returning $1.26\%$ at a Sharpe of $1.85$. Since the M1/M2 architecture and test window 
+are held fixed, this reversal cannot be explained by a change in the underlying signal quality. Instead, it follows directly from USDJPY's confidence scores no longer being 
+benchmarked against a calibration set overwhelmingly composed of EM-pair mistakes.
+
+\item \textbf{GBPUSD, EURUSD, and USDCHF instead illustrate the pooling gate acting as an, admittedly accidental, safeguard.} All three executed zero or negligible 
+trades under pooled calibration (GBPUSD and USDCHF: $0$ trades; EURUSD: $8$ trades, table \ref{tab:pair_level_xgb_production}) and therefore contributed nothing, 
+positive or negative, to the pooled statistics. Once un-gated by pair-specific calibration, and despite Meta Sig. values that remain comparatively tight in absolute 
+terms ($0.02$, $0.04$, and $0.06$ respectively, table \ref{tab:hps_XGBoost_experiment}), all three trade substantially ($77$, $334$, and $451$ trades) and lose money 
+(Sharpe $-1.64$, $-2.56$, and $-2.44$). For these pairs, the pooled reference distribution was not suppressing a real edge but rather was, for the wrong statistical reason, 
+correctly keeping the strategy out of a market where it has none.
+
+\item \textbf{AUDUSD, NZDUSD, and USDCAD sit in an ambiguous middle.} Each posts a small positive return and Sharpe ($0.03/0.06$, $0.89/0.71$, and $0.08/0.36$ 
+respectively) on a moderate number of trades ($211$, $190$, and $146$), backed by the loosest Meta Sig. values among the Majors ($0.19$, $0.12$, and $0.15$). These 
+magnitudes are small enough and the trade counts low enough, that we cannot distinguish a small but real edge from sampling noise around zero without a formal 
+significance test analogous to the deflated Sharpe ratio applied elsewhere in this thesis. We flag this as a case where the pooling critique is directionally 
+plausible but not conclusively demonstrated by this single-fold experiment.
+
+\item \textbf{The EM pairs' edge survives local calibration, but at meaningfully lower volume and absolute return.} Trade counts fall sharply relative to the 
+pooled calibration production run (USDZAR: $934 \rightarrow 123$, USDMXN: $947 \rightarrow 449$, USDTRY: $1019 \rightarrow 595$, USDCNH: $730 \rightarrow 518$), and 
+absolute returns fall correspondingly (most dramatically for USDZAR, from $81.95\%$ to $34.63\%$), while Sharpe ratios remain in the same double-digit range for 
+three of the four pairs and even improve slightly for USDCNH ($3.13 \rightarrow 3.87$). A plausible explanation is that the pooled calibration set, being dominated 
+by EM-pair mistakes, was already close to an EM-specific reference distribution to begin with. Thus, restricting it further to a single pair's own, smaller memory 
+window mainly removes marginal signals that a broader (if still EM-heavy) pool would have admitted, rather than changing the fundamental shape of the reference 
+distribution. This is consistent with the EM pairs' edge being a structural feature of these instruments rather than an artifact of the pooling scheme, unlike the 
+Majors, where the calibration scheme itself was evidently doing much of the work.
+
+\item \textbf{Sample sizes for several Majors remain small enough to warrant caution.} USDCHF's result rests on only $77$ trades and AUDUSD's small positive edge on 
+$211$, both modest relative to the thousands of trades pooled across the tournament phase (see table \ref{tab:conformal_tournament_summary}). As elsewhere in this 
+thesis, we treat these as descriptive, single-fold diagnostics rather than as statistically validated evidence of a per-pair edge. A bootstrap or repeated-fold 
+resampling of this same experiment, analogous to what is proposed for the confusion-matrix diagnostics of section \ref{sec:confusion_matrices_tournament}, would be 
+required before drawing a firmer conclusion.
+\end{itemize}
+
+Taken together, this experiment partially supports and partially complicates the pooling critique raised at the start of this section. The mechanism itself is 
+confirmed, most starkly by USDCHF's unchanged nominal Meta Sig. ($0.02$ in both regimes) producing a completely different acceptance behavior once its reference 
+population changes, and by USDJPY's outright reversal from loss to profit under an otherwise identical pipeline. It does not, however, establish that Majors 
+broadly carry a hidden edge that pooling was masking, since three of the seven now trade into a clear loss and the group average deteriorates rather than 
+improves, and the pooled dispersion statistic is in fact worse than under pooled calibration. The more accurate characterization is that pooled calibration was an 
+indiscriminate gate, one that happened to also block a small number of genuinely profitable Major signals (USDJPY) alongside a larger number of genuinely 
+unprofitable ones (GBPUSD, EURUSD, USDCHF), and that pair-specific calibration trades this coarse, over-conservative filter for a finer one whose false-negative 
+rate improves at the cost of a higher false-positive rate elsewhere in the Major group. We return to this trade-off, and its implications for how conformal 
+significance thresholds should be constructed in a multi-instrument production system, in the synthesis below.
+
 
 \subsection{Synthesis: Revisiting the Overarching Research Question}
 
@@ -1981,11 +2056,30 @@ and conformal veto architecture can be made profitable on a subset of its tradin
 abstention to trade rather than improved directional accuracy. Also, the profits that remain are concentrated in a small number of EM/exotic pairs whose statistics are, on closer 
 inspection, considerably more fragile (event-dependent, small-sample, DSR-flagged, or exhibit data integrity issues) than their headline Sharpe ratios suggest. The tournament 
 framework succeeded at its narrower, comparative task of identifying the least fragile of six candidates under a shared adversarial protocol, but neither the tournament nor the 
-production refit produced an architecture whose success generalizes uniformly across the full multi-pair universe. The per-pair local adaptation this thesis set out to test remains 
-only partially and inconsistently supported by the dissection evidence gathered. Taken as a whole, we regard this as a more honest and more useful finding than a simple confirmation 
-of the original hypothesis would have been, since it identifies precisely which components of the pipeline (the veto logic, the per-pair significance threshold) are doing genuine, 
-traceable work, and which components (uniform cross-pair profitability, the incremental benefit of local trading-parameter tuning over a global configuration) remain unresolved and 
-should not be oversold on the strength of this study's two-fold, short evaluation alone.
+production refit produced an architecture whose success generalizes uniformly across the full multi-pair universe.
+
+\medskip
+
+The supplementary pair-specific calibration experiment qualifies this picture rather than resolving it cleanly. It confirms that pooled calibration was mechanically responsible for 
+a meaningful share of the majors' exclusion from trading in both the tournament and production phases: USDCHF's nominal Meta Sig. is unchanged across regimes ($0.02$ in both) yet 
+moves from zero trades under pooled calibration to $77$ once benchmarked against its own error history, and USDJPY reverses outright from a loss ($-0.81\%$, Sharpe $-2.30$) to a 
+profit ($1.26\%$, Sharpe $1.85$) under the same substitution. At the same time, the experiment does not vindicate the original pooling-critique hypothesis that a hidden, broadly 
+shared Major edge was being masked: GBPUSD, EURUSD, and USDCHF all trade into a clear loss once un-gated, the Major group's average return and Sharpe deteriorate rather than 
+improve relative to the pooled-calibration production run, and the pooled dispersion statistic worsens as well. The "execution guardrail" objective's apparent success is therefore 
+best read as resting on two distinct grounds that this single-fold experiment can only partially disentangle: for GBPUSD, EURUSD, and USDCHF, the pooled veto appears to be 
+correctly, if accidentally, enforcing a genuine absence of edge, whereas for USDJPY it was suppressing a real one for a purely statistical reason unrelated to that pair's actual 
+tradability. AUDUSD, NZDUSD, and USDCAD remain too ambiguous, on trade counts of only a few hundred and Sharpe ratios of comparable magnitude to their standard errors, to be 
+assigned to either camp with any confidence. The local-adaptation hypothesis this thesis set out to test is consequently resolved unevenly across its two dimensions. First is the 
+trading-hyperparameter dimension, where per-pair Kelly fractions and risk-reward geometries are shown to do non-trivial, non-convergent work. Second is the 
+conformal-significance dimension, where switching from pooled to pair-specific calibration is shown to matter a great deal mechanically, without settling whether that shift is, on 
+balance, an improvement or merely a different set of trade-offs.
+
+\medskip
+
+Taken as a whole, we regard this as a more honest and more useful finding than a simple confirmation of the original hypothesis would have been, since it identifies precisely which 
+components of the pipeline (the veto logic, the per-pair significance threshold, and now the composition of the calibration set feeding that threshold) are doing genuine, traceable 
+work, and which components (uniform cross-pair profitability, the incremental benefit of local trading-parameter tuning over a global configuration, and the net direction of the 
+pooling-versus-local-calibration trade-off for the ambiguous Majors) remain unresolved and should not be oversold on the strength of this study's two-fold, short evaluation alone.
 
 %%%%%%%%%%%%%%
 % CONCLUSION %
@@ -2067,14 +2161,6 @@ macroeconomic APIs such as the Federal Reserve Economic Data (FRED) or Refinitiv
 could develop a more nuanced understanding of when a technical signal is aligned with or fighting against fundamental capital flows, thereby further refining the efficacy of the 
 conformal veto logic.
 
-\subsubsection{More Exhaustive Hyperparameter Search}
-
-% For tournament
-% n_model_trials=25        # Number of 'outer' Optuna trials to conduct (computationally expensive because it involves Model training)
-% n_trading_trials=50     # Number of 'inner' Optuna trials to conduct (conducts n backtests on the same model for fair evaluation)
-
-% For productionn_model_trials=50        # Number of 'outer' Optuna trials to conduct (computationally expensive because it involves Model training)
-% n_trading_trials=100     # Number of 'inner' Optuna trials to conduct (conducts n backtests on the same model for fair evaluation)
 
 %%%%%%%%%%%%%%%%
 % BIBLIOGRAPHY %
