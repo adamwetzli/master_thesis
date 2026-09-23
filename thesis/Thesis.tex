@@ -272,7 +272,7 @@ and the underlying reasons for feature performance. This is decomposed into the 
 
 Labeling methods such as the fixed-time horizon method fail to capture the path-dependent nature of real-world trading where a position might hit a stop-loss 
 before reaching its daily close. As argued by \textcite{lopez_de_prado_advances_2018}, financial labels should instead be defined by the first of three barriers hit: 
-a profit-taking level (upper), a stop-loss level (lower), or a time-expiration (vertical). It should be clear that the we label an observation with 1 (long) if the upper
+a profit-taking level (upper), a stop-loss level (lower), or a time-expiration (vertical). It should be clear that we label an observation with 1 (long) if the upper
 barrier is hit first and with -1 (short) if the lower barrier is hit first. For the last case, when the vertical barrier is hit first, \textcite{lopez_de_prado_advances_2018}
 describes two choices: the sign of the return at that time or 0 (hold). The triple-barrier method we use in this research assigns the sign of the return if the vertical
 barrier is hit first and thus gives the following labeling rules:
@@ -946,7 +946,7 @@ suggesting that the profitable risk-reward geometry is itself pair- and regime-s
     \label{fig:financial_dist_xgboost}
 \end{figure}
 
-Before discussing individual panels, it is worth clarifying how each point in figute \ref{fig:financial_dist_xgboost} is constructed. Rather than reporting one distribution per currency 
+Before discussing individual panels, it is worth clarifying how each point in figure \ref{fig:financial_dist_xgboost} is constructed. Rather than reporting one distribution per currency 
 pair, which would be prohibitively repetitive across eleven pairs and two folds, each plotted trial value is the arithmetic mean of that trial's statistic across all pairs and 
 all inner cross-validation folds evaluated during the trading-level Optuna search. This aggregation is what makes a single set of panels representative of the whole tournament, 
 but it also comes at the cost of losing pair-wise inference.
@@ -1792,7 +1792,7 @@ dependence, small sample ratio artifacts) are traceable and interpretable rather
 The dissection in table \ref{tab:strategy_comparison_XGBoost_tournament} gives the clearest and most internally consistent answer of the five objectives. The unfiltered M1 signal is 
 not merely unprofitable, it is actively destructive, averaging Sharpe ratios of $-5.50$ and $-3.08$ across the two folds and posting the single worst per-pair result in the table for 
 every major currency. The same pattern repeats in table \ref{tab:strategy_comparison_XGBoost_production} in so far, that M1 (Only) posts again the worst aggregate performance among all 
-other strategies and also shows some of the wors per-pair results in the table. This establishes unambiguously that the value of the meta-labeling architecture in this thesis lies in 
+other strategies and also shows some of the worst per-pair results in the table. This establishes unambiguously that the value of the meta-labeling architecture in this thesis lies in 
 veto power, not signal refinement. The referee model does not sharpen a usable directional edge, it exists to suppress one that is not usable in the first place.
 
 \medskip
@@ -2165,6 +2165,9 @@ conformal veto logic.
 %%%%%%%%%%%%%%%%
 % BIBLIOGRAPHY %
 %%%%%%%%%%%%%%%%
+
+\pagebreak
+
 \section{References}
 \printbibliography[heading=none]
 
