@@ -423,7 +423,7 @@ Concretely, define the empirical cumulative distribution of M2 confidence condit
 
 \begin{equation}
 \hat{F}_{\text{error}}(s) = P\big(\hat{P}_{\text{M2}}(\text{Signal is Correct}) \leq s \;\big|\; \text{M1 is wrong}\big) 
-= \frac{1}{k}\sum_{i=1}^{k} \mathbb{1}[\alpha_i \leq s]
+= \frac{1}{k}\sum_{i=1}^{k} \mathbf{1}[\alpha_i \leq s]
 \end{equation}
 
 Equation \ref{eq:conformal_p} is then (up to the standard finite-sample $+1$ correction that keeps $p$ valid for any $k$) the 
@@ -1231,7 +1231,7 @@ pooled picture, e.g. via the cross-pair spread of per-pair Brier scores for the 
 The first observation is a genuine limitation. Before defining the relevant baseline, it is worth being precise about which binary variable M2 is actually predicting, since 
 panel A of figures \ref{fig:model-specific confusion matrices 1} and \ref{fig:model-specific confusion matrices 2} contains two distinct binary variables that are easy to confuse. 
 There is M1's predicted direction $d \in \{\text{Short}, \text{Long}\}$ (columns) and the realized ground truth direction $t \in \{\text{Short}, \text{Long}\}$ (rows). M2 does not predict 
-either of these directly, instead it predicts $c = \mathbb{1}[d = t]$, whether M1's call agreed with the outcome. The base rate relevant to $c$ is therefore not a row or column 
+either of these directly, instead it predicts $c = \mathbf{1}[d = t]$, whether M1's call agreed with the outcome. The base rate relevant to $c$ is therefore not a row or column 
 marginal of panel A, either of which would only describe the marginal frequency of $t$ or $d$ in isolation and is blind to whether the two agreed, but specifically the diagonal of 
 the table, $\bar p = P(c=1) = \frac{\text{count}(d{=}\text{Short}, t{=}\text{Short}) + \text{count}(d{=}\text{Long}, t{=}\text{Long})}{N}$, since agreement between prediction 
 and truth is exactly what the diagonal cells encode and the off-diagonal cells do not. For RandomForest in fold 1 these two quantities are numerically close but conceptually and 
